@@ -1,0 +1,47 @@
+<h2>Search Results for "<%= ERB::Util.html_escape(@query) %>" in <%= @category.capitalize %></h2>
+<%= csrf_tag %>
+<% if @results.empty? %>
+  <p>No results found.</p>
+<% else %>
+  <% case @category %>
+  <% when "plays" %>
+    <ul>
+      <% @results.each do |play| %>
+        <li>
+          <a href="/plays/<%= play.id %>"><%= highlight(play.title, @query) %></a>
+          <% if play.author %>(by <%= highlight(play.author, @query) %>)<% end %>
+        </li>
+      <% end %>
+    </ul>
+  <% when "lines" %>
+    <ul>
+      <% @results.each do |line| %>
+        <li>
+          <strong>Line <%= line.start_line_number %> to <%= line.end_line_number %>:</strong>
+          <%= highlight(line.text, @query) %>
+          <br/>
+          <a href="/interpretations/new?line_id=<%= line.id %>">Add ASL interpretation</a>
+        </li>
+      <% end %>
+    </ul>
+  <% when "interpretations" %>
+    <ul>
+      <% @results.each do |interp| %>
+        <li>
+          <a href="/interpretations/<%= interp.id %>">
+            Interpretation by <%= interp.user.display_name || interp.user.email %>
+          </a>
+          <br/>
+          YouTube URL: <a href="<%= interp.youtube_url %>" target="_blank"><%= interp.youtube_url %></a>
+          <br/>
+          Description: <%= highlight(interp.description, @query) %>
+        </li>
+      <% end %>
+    </ul>
+  <% end %>
+
+  <!-- Pagy Navigation -->
+  <div class="pagy-nav">
+    <%= pagy_nav(@pagy) %>
+  </div>
+<% end %>

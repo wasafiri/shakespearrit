@@ -1,0 +1,43 @@
+<div class="user-profile" role="main" aria-labelledby="profile-title">
+  <h1 id="profile-title"><%= @user.display_name %>'s Profile</h1>
+  
+  <section class="achievements" aria-labelledby="achievements-title">
+    <h2 id="achievements-title">Achievements</h2>
+    <div class="badges-grid" role="list">
+      <% @achievements.each do |achievement| %>
+        <div class="badge" role="listitem">
+          <i class="<%= achievement.badge_icon %>" aria-hidden="true"></i>
+          <h3><%= achievement.name %></h3>
+          <p><%= achievement.description %></p>
+          <time datetime="<%= achievement.earned_at.iso8601 %>">
+            Earned <%= achievement.earned_at.strftime("%B %d, %Y") %>
+          </time>
+        </div>
+      <% end %>
+    </div>
+  </section>
+
+  <section class="interpretations" aria-labelledby="interpretations-title">
+    <h2 id="interpretations-title">ASL Interpretations</h2>
+    <div class="interpretations-grid" role="list">
+      <% @interpretations.each do |interp| %>
+        <article class="interpretation-card" role="listitem">
+          <h3>
+            From <%= interp.speech_line.speech.scene.act.play.title %>
+            (Act <%= interp.speech_line.speech.scene.act.act_number %>,
+             Scene <%= interp.speech_line.speech.scene.scene_number %>)
+          </h3>
+          <div class="video-preview">
+            <%= render_partial("interpretations/_video_preview", interpretation: interp) %>
+          </div>
+          <div class="interpretation-stats">
+            <span><%= interp.interpretation_votes.count { |v| v.vote_type == 'upvote' } %> upvotes</span>
+            <time datetime="<%= interp.created_at.iso8601 %>">
+              Posted <%= interp.created_at.strftime("%B %d, %Y") %>
+            </time>
+          </div>
+        </article>
+      <% end %>
+    </div>
+  </section>
+</div>

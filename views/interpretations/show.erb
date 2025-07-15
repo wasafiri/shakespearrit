@@ -1,0 +1,22 @@
+<h2>Interpretation by <%= @interp.user.display_name || @interp.user.email %></h2>
+<%= csrf_tag %>
+<p>
+  YouTube Link: <a href="<%= @interp.youtube_url %>" target="_blank"><%= @interp.youtube_url %></a><br/>
+  Description: <%= @interp.description %><br/>
+  Average Rating: <%= @interp.average_rating %>
+</p>
+
+<!-- Voting Form -->
+<form method="POST" action="">
+  <p>Vote on this interpretation:</p>
+  <label>
+    <input type="radio" name="vote_type" value="upvote" /> Upvote
+  </label><br/>
+  <label>
+    <input type="radio" name="vote_type" value="downvote" /> Downvote
+  </label><br/>
+  <label>
+    <input type="radio" name="vote_type" value="inappropriate" /> Inappropriate
+  </label><br/>
+  <button type="submit">Submit Vote</button>
+</form>

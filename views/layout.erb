@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8"/>
+    <title>Shakespeare ASL</title>
+    <%= assets(:css) %>
+  </head>
+  <main id="main-content" role="main">
+  <%= breadcrumb_trail %>
+  <% if flash["error"] %>
+    <div role="alert" class="error-message">
+      <%= flash["error"] %>
+    </div>
+  <% end %>
+  <% if flash["notice"] %>
+    <div role="status" class="notice-message">
+      <%= flash["notice"] %>
+    </div>
+  <% end %>
+  <%= yield %>
+  </main>
+  <body>
+    <header>
+      <h1>Shakespeare ASL Interpretations</h1>
+      <nav>
+        <a href="/">Home</a>
+        <a href="/plays">Plays</a>
+        <% if @current_user %>
+          <a href="/auth/logout">Logout (@<%= @current_user.display_name || @current_user.email %>)</a>
+          <% if @current_user.is_admin %>
+            <a href="/admin">Admin</a>
+          <% end %>
+        <% else %>
+          <a href="/auth/login">Login</a>
+          <a href="/auth/register">Register</a>
+        <% end %>
+        <!-- Search Form -->
+        <form action="/search" method="GET" style="display:inline; margin-left:20px;">
+          <input type="text" name="query" placeholder="Search..." required/>
+          <select name="category">
+            <option value="plays">Plays</option>
+            <option value="lines">Speech Lines</option>
+            <option value="interpretations">Interpretations</option>
+          </select>
+          <button type="submit">Search</button>
+        </form>
+      </nav>
+    </header>
+
+    <% if flash["error"] %>
+      <div style="color:red;"><%= flash["error"] %></div>
+    <% end %>
+    <% if flash["notice"] %>
+      <div style="color:green;"><%= flash["notice"] %></div>
+    <% end %>
+
+    <%= yield %>
+
+    <footer>
+      <hr/>
+      <p>&copy; <%= Time.now.year %> Shakespeare ASL App</p>
+    </footer>
+    <%= assets(:js) %>
+  </body>
+</html>

@@ -1,0 +1,12 @@
+<h2><%= @scene.description %></h2>
+<%= csrf_tag %>
+<p>Speeches:</p>
+<ul>
+<% @speeches.each do |s| %>
+  <li>
+    <a href="/plays/<%= @play.id %>/acts/<%= @act.id %>/scenes/<%= @scene.id %>/speeches/<%= s.id %>">
+      <%= s.speaker_name %> (order <%= s.order_in_scene %>)
+    </a>
+  </li>
+<% end %>
+</ul>

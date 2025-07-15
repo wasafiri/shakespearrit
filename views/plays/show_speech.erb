@@ -1,0 +1,24 @@
+<h2>Speech by <%= @speech.speaker_name %></h2>
+<%= csrf_tag %>
+<ul>
+<% @lines.each do |line| %>
+  <li>
+    [Line <%= line.start_line_number %> to <%= line.end_line_number %>]:
+    <%= line.text %>
+    <br/>
+    <a href="/interpretations/new?line_id=<%= line.id %>">Add ASL interpretation</a>
+    <br/>
+    <strong>ASL Interpretations:</strong>
+    <ul>
+      <% line.interpretations.each do |interp| %>
+        <li>
+          <a href="/interpretations/<%= interp.id %>">
+            <%= interp.youtube_url %>
+          </a>
+          by <%= interp.user.display_name || interp.user.email %>
+        </li>
+      <% end %>
+    </ul>
+  </li>
+<% end %>
+</ul>

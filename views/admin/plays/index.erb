@@ -1,0 +1,30 @@
+<h2>Manage Plays</h2>
+<%= csrf_tag %>
+<a href="/admin/plays/new">Create New Play</a>
+<table>
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Title</th>
+      <th>Author</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% @plays.each do |play| %>
+      <tr>
+        <td><%= play.id %></td>
+        <td><%= play.title %></td>
+        <td><%= play.author %></td>
+        <td>
+          <a href="/admin/plays/<%= play.id %>">View</a> |
+          <a href="/admin/plays/<%= play.id %>/edit">Edit</a> |
+          <form method="POST" action="/admin/plays/<%= play.id %>/delete" style="display:inline;">
+            <%= csrf_tag %>
+            <button type="submit" onclick="return confirm('Are you sure you want to delete this play?');">Delete</button>
+          </form>
+        </td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>

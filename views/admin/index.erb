@@ -1,0 +1,22 @@
+<h2>Admin Area</h2>
+<%= csrf_tag %>
+<h3>All Users</h3>
+<ul>
+<% @all_users.each do |u| %>
+  <li><%= u.id %> - <%= u.email %> (<%= u.display_name %>) <%= "(admin)" if u.is_admin %></li>
+<% end %>
+</ul>
+
+<h3>All Interpretations</h3>
+<ul>
+<% @all_interps.each do |i| %>
+  <li>
+    ID: <%= i.id %>
+    by: <%= i.user.display_name || i.user.email %> 
+    on line ID <%= i.speech_line_id %> 
+    (<%= i.youtube_url %>)
+    <br/>
+    votes: <%= i.interpretation_votes.count %>
+  </li>
+<% end %>
+</ul>

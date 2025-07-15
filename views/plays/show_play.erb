@@ -1,0 +1,12 @@
+<h2><%= @play.title %></h2>
+<%= csrf_tag %>
+<p>Acts in this play:</p>
+<ul>
+<% @acts.each do |act| %>
+  <li>
+    <a href="/plays/<%= @play.id %>/acts/<%= act.id %>">
+      Act <%= act.act_number %> (<%= act.description %>)
+    </a>
+  </li>
+<% end %>
+</ul>

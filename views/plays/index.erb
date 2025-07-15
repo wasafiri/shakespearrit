@@ -1,0 +1,10 @@
+<h2>Plays</h2>
+<%= csrf_tag %>
+<ul>
+<% @plays.each do |play| %>
+  <li>
+    <a href="/plays/<%= play.id %>"><%= play.title %></a>
+    <% if play.author %>(by <%= play.author %>)<% end %>
+  </li>
+<% end %>
+</ul>
