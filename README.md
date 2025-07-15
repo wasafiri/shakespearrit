@@ -7,7 +7,7 @@ Shakespearrit is a web application dedicated to the works of William Shakespeare
 *   **Browse Plays:** Read the full text of all of Shakespeare's plays, structured by acts and scenes.
 *   **ASL Interpretations:** Watch user-submitted YouTube videos of ASL interpretations for individual lines.
 *   **User Accounts:** Register for an account, log in, and manage your profile.
-*   **Contribute:** Submit your own ASL interpretations by providing a YouTube link for a specific line.
+*   **Contribute:** Submit your own ASL interpretations by providing a YouTube link for a specific line or lines. 
 *   **Voting:** Upvote or downvote interpretations to help highlight the best ones.
 *   **Search:** Search for plays, specific lines, or interpretations.
 *   **Achievements:** Earn badges for your contributions to the community.
@@ -70,18 +70,7 @@ The application will be available at `http://localhost:9292`.
 
 ## Testing
 
-This project uses two testing frameworks:
-
-1.  **RSpec:** For the original, legacy features of the application.
-2.  **Minitest:** For the new API and features outlined in the `TODO.md` document. These tests serve as a living specification for the application's evolution.
-
-### Running the Legacy RSpec Suite
-
-To run the original test suite, use the following command:
-
-```sh
-rspec
-```
+This project uses **Minitest:** for the API and features outlined in the `TODO.md` document. These tests serve as a living specification for the application's evolution.
 
 ### Running the New Minitest Feature Suite
 
