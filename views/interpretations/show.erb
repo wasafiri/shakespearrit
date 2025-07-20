@@ -1,5 +1,4 @@
 <h2>Interpretation by <%= @interp.user.display_name || @interp.user.email %></h2>
-<%= csrf_tag %>
 <p>
   YouTube Link: <a href="<%= @interp.youtube_url %>" target="_blank"><%= @interp.youtube_url %></a><br/>
   Description: <%= @interp.description %><br/>
@@ -8,6 +7,7 @@
 
 <!-- Voting Form -->
 <form method="POST" action="">
+  <%== csrf_tag %>
   <p>Vote on this interpretation:</p>
   <label>
     <input type="radio" name="vote_type" value="upvote" /> Upvote

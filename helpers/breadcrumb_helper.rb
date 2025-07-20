@@ -62,4 +62,4 @@ module BreadcrumbHelper
       </nav>
       HTML
     end
-  end
+end

@@ -1,13 +1,180 @@
-<h2>New ASL Interpretation</h2>
-<%= csrf_tag %>
-<form method="POST" action="">
-  <label>YouTube URL:
-    <input type="text" name="youtube_url">
-  </label>
-  <br/>
-  <label>Optional description/notes:
-    <textarea name="description"></textarea>
-  </label>
-  <br/>
-  <button type="submit">Submit</button>
-</form>
+<style>
+  .upload-container {
+    max-width: 800px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background-color: #f9f9f9;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  }
+  .checklist {
+    background-color: #eef;
+    border-left: 4px solid #4a4ad7;
+    padding: 1rem;
+    margin-bottom: 2rem;
+    border-radius: 4px;
+  }
+  .checklist h3 {
+    margin-top: 0;
+    color: #333;
+  }
+  .checklist ul {
+    padding-left: 20px;
+    list-style-type: "✅ ";
+  }
+  .form-group {
+    margin-bottom: 1.5rem;
+  }
+  .form-group label {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+  }
+  .form-group input[type="file"],
+  .form-group textarea,
+  .form-group input[type="text"] {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+  }
+  .form-group small {
+    color: #666;
+  }
+  .submit-btn {
+    background-color: #4a4ad7;
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 4px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+  .submit-btn:disabled {
+    background-color: #aaa;
+    cursor: not-allowed;
+  }
+  #upload-status-container {
+    margin-top: 1.5rem;
+    padding: 1rem;
+    border-radius: 4px;
+    display: none; /* Hidden by default */
+  }
+  #upload-status-container.uploading {
+    display: block;
+    background-color: #e6f7ff;
+    border: 1px solid #91d5ff;
+  }
+  #upload-status-container.success {
+    display: block;
+    background-color: #f6ffed;
+    border: 1px solid #b7eb8f;
+  }
+  #upload-status-container.error {
+    display: block;
+    background-color: #fff1f0;
+    border: 1px solid #ffa39e;
+  }
+</style>
+
+<div class="upload-container">
+  <h2>Contribute Your Interpretation</h2>
+  <p>Upload a pre-recorded video of your ASL interpretation for this line of text.</p>
+
+  <!-- Pre-flight Checklist from TODO Task 1.3 -->
+  <div class="checklist">
+    <h3>Quick Tips for a Great Recording</h3>
+    <ul>
+      <li><strong>Good Lighting:</strong> Make sure your face is well-lit, preferably from the front.</li>
+      <li><strong>Clear Background:</strong> Choose a simple, non-distracting background.</li>
+      <li><strong>Framing:</strong> Position yourself so you are visible from the shoulders up.</li>
+      <li><strong>Camera Angle:</strong> Place your camera at eye level for a natural look.</li>
+    </ul>
+  </div>
+
+  <form id="new-interpretation-form" enctype="multipart/form-data">
+    <%== csrf_tag %>
+    <input type="hidden" name="speech_line_id" value="<%= request.params['speech_line_id'] %>">
+
+    <div class="form-group">
+      <label for="video-file">1. Select Video File</label>
+      <input type="file" id="video-file" name="video_file" accept="video/*" required>
+    </div>
+
+    <div class="form-group">
+      <label for="description">2. Add a Gloss or Note (Optional)</label>
+      <textarea id="description" name="description" rows="4" placeholder="Explain your translation choices, historical context, or any other notes for the community."></textarea>
+    </div>
+
+    <div class="form-group">
+      <label for="tags">3. Add Tags (Optional)</label>
+      <input type="text" id="tags" name="tags" placeholder="e.g., #formal, #visual-metaphor, #beginner-friendly">
+      <small>Separate tags with commas. These help others discover your interpretation.</small>
+    </div>
+
+    <button type="submit" class="submit-btn">Upload and Submit</button>
+  </form>
+
+  <div id="upload-status-container">
+    <p id="upload-status-message"></p>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const interpretationForm = document.getElementById('new-interpretation-form');
+    const statusContainer = document.getElementById('upload-status-container');
+    const statusMessage = document.getElementById('upload-status-message');
+    const submitButton = interpretationForm.querySelector('button[type="submit"]');
+
+    if (!interpretationForm || !statusContainer || !statusMessage || !submitButton) {
+      console.error('A required form element for the upload script was not found.');
+      return;
+    }
+
+    const setStatus = (message, type) => {
+      statusMessage.textContent = message;
+      statusContainer.className = type; // e.g., 'uploading', 'success', 'error'
+    };
+
+    const handleFormSubmit = async (event) => {
+      event.preventDefault();
+      const formData = new FormData(interpretationForm);
+
+      if (!formData.get('video_file')?.size) {
+        setStatus('Please select a video file before submitting.', 'error');
+        return;
+      }
+
+      submitButton.disabled = true;
+      setStatus('Uploading your video... Please wait.', 'uploading');
+
+      try {
+        const csrfToken = interpretationForm.querySelector('input[name="_csrf"]').value;
+        const response = await fetch('/api/v1/uploads', {
+          method: 'POST',
+          body: formData,
+          headers: { 'X-CSRF-TOKEN': csrfToken },
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+          setStatus('Success! Your interpretation has been submitted and is being processed.', 'success');
+          interpretationForm.reset();
+        } else {
+          throw new Error(result.error || 'An unknown server error occurred.');
+        }
+      } catch (error) {
+        setStatus(`Upload failed: ${error.message}`, 'error');
+        console.error('Upload script error:', error);
+      } finally {
+        submitButton.disabled = false;
+      }
+    };
+
+    interpretationForm.addEventListener('submit', handleFormSubmit);
+  });
+</script>

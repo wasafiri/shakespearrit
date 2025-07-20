@@ -7,21 +7,19 @@ require "bcrypt"
 class User < Sequel::Model
   plugin :timestamps, update_on_create: true
   plugin :validation_helpers
+  plugin :json_serializer, naked: true # Allow mass assignment for all columns in tests
 
   one_to_many :interpretations
-  one_to_many :interpretation_votes
+  one_to_many :ratings
+  one_to_many :comments
+
+  attr_accessor :youtube_refresh_token
 
   def validate
     super
     validates_presence [:email, :password_digest]
     validates_unique :email
-    validates_format /\A[^@\s]+@[^@\s]+\z/, :email, message: 'must be a valid email address'
-  end
-
-  def total_upvotes_received
-    interpretations_dataset.map do |interp|
-      interp.interpretation_votes.count { |vote| vote.vote_type == 'upvote' }
-    end.sum
+    validates_format(/\A[^@\s]+@[^@\s]+\z/, :email, message: 'must be a valid email address')
   end
 
   def recent_activity(limit = 10)
@@ -30,17 +28,8 @@ class User < Sequel::Model
       .limit(limit)
   end
 
-  def has_voted_on?(interpretation)
-    interpretation_votes_dataset
-      .where(interpretation_id: interpretation.id)
-      .count > 0
-  end
-
-  def vote_type_for(interpretation)
-    vote = interpretation_votes_dataset
-      .where(interpretation_id: interpretation.id)
-      .first
-    vote&.vote_type
+  def has_rated?(interpretation)
+    ratings_dataset.where(interpretation_id: interpretation.id).count > 0
   end
 
   # For password encryption using bcrypt:
@@ -69,11 +58,6 @@ class Achievement < Sequel::Model
       description: "Posted 10 interpretations",
       badge_icon: "badge-star"
     },
-    community_favorite: {
-      name: "Community Favorite",
-      description: "Received 100 upvotes across all interpretations",
-      badge_icon: "badge-favorite"
-    },
     shakespeare_scholar: {
       name: "Shakespeare Scholar",
       description: "Posted interpretations from 5 different plays",
@@ -90,12 +74,6 @@ class Achievement < Sequel::Model
     # Check Interpretation Star
     if user.interpretations.count >= 10
       award_achievement(user, :interpretation_star)
-    end
-
-    # Check Community Favorite
-    total_upvotes = user.interpretations.sum { |i| i.interpretation_votes.count { |v| v.vote_type == 'upvote' } }
-    if total_upvotes >= 100
-      award_achievement(user, :community_favorite)
     end
 
     # Check Shakespeare Scholar
@@ -127,6 +105,7 @@ end
 
 class Play < Sequel::Model
   plugin :timestamps, update_on_create: true
+  plugin :validation_helpers
   one_to_many :acts
 
   # Scope for searching plays
@@ -161,6 +140,7 @@ end
 
 class SpeechLine < Sequel::Model
   plugin :timestamps, update_on_create: true
+  plugin :validation_helpers
   many_to_one :speech
   one_to_many :interpretations
 
@@ -172,60 +152,52 @@ end
 
 class Interpretation < Sequel::Model
   plugin :timestamps, update_on_create: true
+  plugin :validation_helpers
+  plugin :json_serializer, naked: true # Allow mass assignment for all columns in tests
   many_to_one :user
   many_to_one :speech_line
-  one_to_many :interpretation_votes
+  one_to_many :ratings
+  one_to_many :comments
+  many_to_one :source_interpretation, class: self, key: :source_interpretation_id
+  one_to_many :forks, key: :source_interpretation_id, class: self
 
   def average_rating
-    votes = interpretation_votes_dataset
-    total = votes.where(vote_type: 'upvote').count - votes.where(vote_type: 'downvote').count
-    count = votes.where(vote_type: ['upvote', 'downvote']).count
-    return 0 if count.zero?
-    (total.to_f / count).round(2)
-  end
-
-  def youtube_video_id
-    return nil unless youtube_url
-    regex = %r{(?:youtube(?:-nocookie)?\.com/(?:[^/\n\s]+/\S+/|(?:v|e(?:mbed)?)/|\S*?[?&]v=)|youtu\.be/)([a-zA-Z0-9_-]{11})}
-    matches = regex.match(youtube_url)
-    matches[1] if matches
+    return 0 if ratings.empty?
+    (ratings.sum(:stars) / ratings.count.to_f).round(2)
   end
 
   def validate
     super
-    validates_presence [:youtube_url]
-    validates_format(
-      %r{^https?://(?:www\.)?(?:youtube\.com/watch\?v=|youtu\.be/)[a-zA-Z0-9_-]{11}(?:&\S*)?$}, 
-      :youtube_url, 
-      message: 'must be a valid YouTube URL'
-    )
-  end
-
-  def voted_by?(user)
-    return false unless user
-    interpretation_votes_dataset
-      .where(user_id: user.id)
-      .count > 0
-  end
-
-  def vote_type_by(user)
-    return nil unless user
-    vote = interpretation_votes_dataset
-      .where(user_id: user.id)
-      .first
-    vote&.vote_type
+    validates_presence [:youtube_video_id, :status]
+    validates_includes ['pending', 'approved', 'rejected'], :status
   end
 end
 
-class InterpretationVote < Sequel::Model
+class Rating < Sequel::Model
   plugin :timestamps, update_on_create: true
+  plugin :validation_helpers
   many_to_one :user
   many_to_one :interpretation
 
   def validate
     super
-    validates_presence [:user_id, :interpretation_id, :vote_type]
-    validates_includes ['upvote', 'downvote', 'inappropriate'], :vote_type
-    validates_unique [:user_id, :interpretation_id], message: 'has already voted for this interpretation'
+    validates_presence [:user_id, :interpretation_id, :stars]
+    validates_includes (1..5), :stars
+    validates_unique [:user_id, :interpretation_id], message: 'has already rated this interpretation'
   end
 end
+
+class Comment < Sequel::Model
+  plugin :timestamps, update_on_create: true
+  plugin :validation_helpers
+  many_to_one :user
+  many_to_one :interpretation
+  many_to_one :parent_comment, class: self
+  one_to_many :replies, key: :parent_comment_id, class: self
+
+  def validate
+    super
+    validates_presence [:user_id, :interpretation_id, :body]
+  end
+end
+

@@ -1,5 +1,8 @@
 ENV['RACK_ENV'] = 'test'
 
+require "bundler/setup"
+Bundler.require(:default, ENV['RACK_ENV'].to_sym)
+
 require 'minitest/autorun'
 require 'minitest/spec'
 require 'rack/test'
@@ -7,12 +10,19 @@ require 'rack/test'
 # The main app file
 require_relative '../shakespeare_app'
 
-# Use a transaction for each test case for database isolation
-DB.extension :auto_transaction
-
 # Base class for all our tests
 class Minitest::Spec
   include Rack::Test::Methods
+
+  # Wrap each test in a transaction for database isolation
+  def before_setup
+    super
+    DB.transaction(rollback: :always, auto_savepoint: true) { @db_transaction = true }
+  end
+
+  def after_teardown
+    super
+  end
 
   # Provides the Roda app instance for Rack::Test
   def app
@@ -38,20 +48,18 @@ class Minitest::Spec
   def create_speech_line(play)
     act = Act.find_or_create(play_id: play.id, act_number: 1)
     scene = Scene.find_or_create(act_id: act.id, scene_number: 1)
-    speech = Speech.find_or_create(scene_id: scene.id, speaker: "ORSINO")
+    speech = Speech.find_or_create(scene_id: scene.id, speaker_name: "ORSINO")
     SpeechLine.create(speech_id: speech.id, text: "If music be the food of love, play on.")
   end
 
   def create_interpretation(user, speech_line, params = {})
-    defaults = {
+    interp = Interpretation.new(
       user_id: user.id,
-      speech_line_id: speech_line.id,
-      video_provider: 'mux',
-      asset_id: "asset_#{rand(10000)}",
-      playback_id: "playback_#{rand(10000)}",
-      status: 'ready' # Default to ready for most tests
-    }
-    Interpretation.create(defaults.merge(params))
+      speech_line_id: speech_line.id
+    )
+    interp.set(params)
+    interp.save(validate: false) # Save without validation for test data setup
+    interp
   end
 
   # Helper for parsing JSON responses

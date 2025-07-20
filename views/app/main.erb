@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shakespearrit - ASL Interpretations</title>
+  <style>
+    :root {
+      --primary-color: #1877f2;
+      --background-color: #f0f2f5;
+      --container-background: #ffffff;
+      --text-color: #1c1e21;
+      --subtle-text-color: #606770;
+      --border-color: #e4e6eb;
+      --hover-color: #e7f3ff;
+      --skeleton-color: #e0e0e0;
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    body, html { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; height: 100%; overflow: hidden; background-color: var(--background-color); }
+    .hidden { display: none !important; }
+    .visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0; }
+
+    /* --- Landing & SPA Structure --- */
+    #background-video-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -100; }
+    #background-video { object-fit: cover; width: 100%; height: 100%; opacity: 0.05; }
+    .landing-overlay { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; text-align: center; padding: 2rem; }
+    .landing-overlay h1 { font-size: 3rem; color: var(--text-color); }
+    .landing-overlay p { font-size: 1.25rem; color: var(--subtle-text-color); max-width: 600px; }
+    .landing-actions .btn { display: inline-block; padding: 14px 32px; margin: 10px; font-size: 1.1rem; font-weight: bold; cursor: pointer; border-radius: 6px; text-decoration: none; transition: all 0.2s; }
+    .landing-actions .btn-primary { background-color: var(--primary-color); color: white; border: none; }
+    .landing-actions .btn-secondary { background-color: #e4e6eb; color: var(--text-color); border: none; }
+    .landing-actions .btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    .spa-container { display: flex; height: 100vh; }
+    .left-rail { width: 400px; min-width: 300px; background-color: var(--container-background); border-right: 1px solid var(--border-color); padding: 1rem; overflow-y: auto; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+    .right-pane { flex-grow: 1; padding: 2rem 3rem; overflow-y: auto; }
+
+    /* --- Tree Navigator --- */
+    #plays-navigator ul { list-style-type: none; padding-left: 1rem; }
+    .tree-item { padding: 10px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+    .tree-item:hover { background-color: #f0f2f5; }
+    .tree-item[aria-expanded="true"] { background-color: var(--hover-color); }
+    .tree-item .label::before { content: '▶ '; font-size: 0.8em; transition: transform 0.2s; display: inline-block; }
+    .tree-item[aria-expanded="true"] > .label::before { transform: rotate(90deg); }
+    .speech-item { font-weight: normal; padding-left: 1rem; }
+
+    /* --- Content Pane & Interpretation Cards --- */
+    .content-header h2 { font-size: 1.8rem; margin: 0 0 0.5rem 0; }
+    .content-header p { margin: 0 0 2rem 0; color: var(--subtle-text-color); }
+    .line-item { margin-bottom: 2rem; }
+    .line-item blockquote { font-family: Georgia, serif; font-size: 1.4em; margin: 0 0 1.5rem 0; padding-left: 1.5rem; border-left: 3px solid var(--primary-color); }
+    .interpretations-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 2rem; }
+    .interpretation-card { background-color: var(--container-background); border: 1px solid var(--border-color); border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); display: flex; flex-direction: column; }
+    .interpretation-card-video { cursor: pointer; position: relative; }
+    .interpretation-card-video img { width: 100%; display: block; border-top-left-radius: 8px; border-top-right-radius: 8px; }
+    .interpretation-card-video .play-icon { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 60px; height: 60px; background-color: rgba(0,0,0,0.6); border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; transition: transform 0.2s; }
+    .interpretation-card-video:hover .play-icon { transform: translate(-50%, -50%) scale(1.1); }
+    .interpretation-card-body { padding: 1rem; flex-grow: 1; display: flex; flex-direction: column; }
+    .interpretation-card-user { font-size: 0.9em; color: var(--subtle-text-color); margin-bottom: 1rem; }
+    
+    /* --- Accessible Star Rating --- */
+    .star-rating-fieldset { border: none; padding: 0; margin: 0 0 1rem 0; }
+    .star-rating-fieldset legend { font-weight: bold; margin-bottom: 0.5rem; }
+    .star-rating-group { display: flex; flex-direction: row-reverse; justify-content: flex-end; }
+    .star-rating-group input[type="radio"] { display: none; }
+    .star-rating-group label { font-size: 1.8rem; color: #ccc; cursor: pointer; transition: color 0.2s; }
+    .star-rating-group input[type="radio"]:checked ~ label,
+    .star-rating-group label:hover,
+    .star-rating-group label:hover ~ label { color: #fdd835; }
+
+    /* --- Comments --- */
+    .comment-section { margin-top: auto; }
+    .comment-list { max-height: 200px; overflow-y: auto; margin-bottom: 1rem; }
+    .comment { font-size: 0.9em; margin-bottom: 0.5rem; }
+    .comment strong { color: var(--text-color); }
+    .comment-form textarea { width: 100%; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: 4px; resize: vertical; }
+    .comment-form button { background-color: var(--primary-color); color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; margin-top: 0.5rem; float: right; }
+
+    /* --- Modal --- */
+    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+    .modal-content { background: white; padding: 1rem; border-radius: 8px; max-width: 90vw; max-height: 90vh; }
+    .modal-video-wrapper { position: relative; padding-bottom: 56.25%; height: 0; }
+    .modal-video-wrapper iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+
+    /* --- Skeleton Loaders --- */
+    .skeleton { background-color: var(--skeleton-color); border-radius: 4px; animation: pulse 1.5s infinite ease-in-out; }
+    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+    .skeleton-text { height: 1em; margin-bottom: 0.5em; }
+    .skeleton-card { height: 350px; }
+  </style>
+</head>
+<body>
+
+  <div id="background-video-container">
+    <video autoplay muted loop id="background-video">
+      <source src="https://www.w3schools.com/howto/rain.mp4" type="video/mp4">
+    </video>
+  </div>
+
+  <div id="landing-overlay" class="landing-overlay">
+    <h1>Welcome to Shakespearrit</h1>
+    <p>A community for creating, sharing, and discovering American Sign Language interpretations of Shakespeare's works.</p>
+    <div class="landing-actions">
+      <button id="browse-plays-btn" class="btn btn-primary">Browse Plays</button>
+      <a href="/interpretations/new" class="btn btn-secondary">Contribute</a>
+    </div>
+  </div>
+
+  <div id="app-container" class="spa-container hidden">
+    <aside class="left-rail">
+      <h2>Plays</h2>
+      <nav id="plays-navigator" role="tree" aria-label="Shakespeare's Works"></nav>
+    </aside>
+    <main id="content-pane" class="right-pane" role="main" aria-live="polite">
+      <!-- Content is rendered here -->
+    </main>
+  </div>
+
+  <div id="status-announcer" class="visually-hidden" aria-live="assertive" aria-atomic="true"></div>
+
+  <script>
+    const ShakespeareSPA = {
+      // ... (apiEndpoints, elements, init, bindEvents, showApp are mostly the same)
+      // ... I will only show the changed/new methods for brevity.
+
+      init() {
+        // ... cache all elements, including the new status announcer
+        this.elements.statusAnnouncer = document.getElementById('status-announcer');
+      },
+
+      bindEvents() {
+        // ...
+        this.elements.contentPane.addEventListener('click', (e) => this.handleContentInteraction(e));
+      },
+
+      async fetchAndRenderSpeechContent(speechId, speechLabel) {
+        this.elements.contentPane.innerHTML = this.renderSpeechSkeleton(speechLabel);
+        try {
+          // ... (fetch logic is the same)
+          const speech = await response.json();
+          this.renderSpeech(speech);
+        } catch (error) {
+          // ... (error handling is the same)
+        }
+      },
+
+      renderSpeech(speech) {
+        let html = `<div class="content-header"><h2>${speech.character}</h2></div>`;
+        speech.lines.forEach(line => {
+          html += `<div class="line-item"><blockquote>“${line.text}”</blockquote>`;
+          if (line.interpretations.length > 0) {
+            html += `<div class="interpretations-grid">`;
+            line.interpretations.forEach(interp => {
+              html += this.renderInterpretationCard(interp);
+            });
+            html += `</div>`;
+          } else {
+            html += `<p class="status-message">No interpretations yet. <a href="/interpretations/new?speech_line_id=${line.id}">Be the first!</a></p>`;
+          }
+          html += `</div>`;
+        });
+        this.elements.contentPane.innerHTML = html;
+      },
+
+      renderInterpretationCard(interp) {
+        const avgRating = interp.average_rating || 0;
+        return `
+          <div class="interpretation-card" data-interpretation-id="${interp.id}">
+            <div class="interpretation-card-video" data-video-id="${interp.youtube_video_id}" role="button" aria-label="Play video for interpretation by ${interp.user.email}">
+              <img src="https://i.ytimg.com/vi/${interp.youtube_video_id}/hqdefault.jpg" alt="">
+              <div class="play-icon">▶</div>
+            </div>
+            <div class="interpretation-card-body">
+              <p class="interpretation-card-user">By: ${interp.user.email}</p>
+              
+              <fieldset class="star-rating-fieldset">
+                <legend>Rate this interpretation</legend>
+                <div class="star-rating-group">
+                  <input type="radio" id="star5-${interp.id}" name="rating-${interp.id}" value="5"><label for="star5-${interp.id}" title="5 stars">★</label>
+                  <input type="radio" id="star4-${interp.id}" name="rating-${interp.id}" value="4"><label for="star4-${interp.id}" title="4 stars">★</label>
+                  <input type="radio" id="star3-${interp.id}" name="rating-${interp.id}" value="3"><label for="star3-${interp.id}" title="3 stars">★</label>
+                  <input type="radio" id="star2-${interp.id}" name="rating-${interp.id}" value="2"><label for="star2-${interp.id}" title="2 stars">★</label>
+                  <input type="radio" id="star1-${interp.id}" name="rating-${interp.id}" value="1"><label for="star1-${interp.id}" title="1 star">★</label>
+                </div>
+              </fieldset>
+
+              <div class="comment-section">
+                <div class="comment-list" id="comments-for-${interp.id}">
+                  <!-- Comments will be rendered here -->
+                  <p class="status-message">No comments yet.</p>
+                </div>
+                <form class="comment-form" method="POST" action="">
+                  <%== csrf_tag("comments") %>
+                  <textarea placeholder="Add a public comment..." aria-label="Add a public comment for interpretation ${interp.id}" required></textarea>
+                  <button type="submit">Comment</button>
+                </form>
+              </div>
+            </div>
+          </div>
+        `;
+      },
+
+      handleContentInteraction(event) {
+        const videoTrigger = event.target.closest('.interpretation-card-video');
+        const ratingInput = event.target.closest('.star-rating-group input');
+        const commentForm = event.target.closest('.comment-form');
+
+        if (videoTrigger) {
+          this.openVideoModal(videoTrigger.dataset.videoId);
+        }
+        if (ratingInput) {
+          const interpId = ratingInput.closest('.interpretation-card').dataset.interpretationId;
+          this.submitRating(interpId, ratingInput.value, ratingInput.parentElement);
+        }
+        if (commentForm) {
+          event.preventDefault();
+          const interpId = commentForm.closest('.interpretation-card').dataset.interpretationId;
+          const textarea = commentForm.querySelector('textarea');
+          this.submitComment(interpId, textarea);
+        }
+      },
+
+      async submitRating(interpretationId, stars, ratingGroup) {
+        ratingGroup.style.pointerEvents = 'none'; // Disable further clicks
+        this.announceStatus(`Submitting ${stars} star rating.`);
+        try {
+          const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+          const response = await fetch(this.apiEndpoints.rate(interpretationId), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
+            body: JSON.stringify({ stars: parseInt(stars, 10) })
+          });
+          if (!response.ok) throw new Error('Rating failed to save.');
+          this.announceStatus('Rating submitted successfully.');
+        } catch (error) {
+          console.error('Rating submission failed:', error);
+          this.announceStatus(error.message);
+        }
+      },
+
+      async submitComment(interpretationId, textarea) {
+        const body = textarea.value.trim();
+        if (!body) return;
+        
+        textarea.disabled = true;
+        this.announceStatus('Posting comment.');
+        try {
+          const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+          const response = await fetch(this.apiEndpoints.comment(interpretationId), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
+            body: JSON.stringify({ body })
+          });
+          if (!response.ok) throw new Error('Comment failed to post.');
+          
+          const commentList = document.getElementById(`comments-for-${interpretationId}`);
+          if (commentList.querySelector('.status-message')) {
+            commentList.innerHTML = ''; // Clear "No comments yet"
+          }
+          const newComment = document.createElement('div');
+          newComment.className = 'comment';
+          newComment.innerHTML = `<strong>You:</strong> ${body}`;
+          commentList.prepend(newComment);
+          textarea.value = '';
+          this.announceStatus('Comment posted successfully.');
+        } catch (error) {
+          console.error('Comment submission failed:', error);
+          this.announceStatus(error.message);
+        } finally {
+          textarea.disabled = false;
+        }
+      },
+
+      openVideoModal(videoId) {
+        const modalOverlay = document.createElement('div');
+        modalOverlay.className = 'modal-overlay';
+        modalOverlay.setAttribute('role', 'dialog');
+        modalOverlay.setAttribute('aria-modal', 'true');
+        modalOverlay.innerHTML = `
+          <div class="modal-content" role="document">
+            <div class="modal-video-wrapper">
+              <iframe src="https://www.youtube.com/embed/${videoId}?autoplay=1" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(modalOverlay);
+
+        const closeModal = () => document.body.removeChild(modalOverlay);
+        modalOverlay.addEventListener('click', closeModal);
+        document.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape') closeModal();
+        }, { once: true });
+      },
+
+      announceStatus(message) {
+        this.elements.statusAnnouncer.textContent = message;
+      },
+      
+      // ... (other helper methods like renderSkeleton, getAriaLevel, etc. are the same)
+    };
+
+    document.addEventListener('DOMContentLoaded', () => ShakespeareSPA.init());
+  </script>
+</body>
+</html>

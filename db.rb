@@ -1,4 +1,6 @@
 require "sequel"
+require "logger"
+
 
 DB = Sequel.connect(ENV.fetch("DATABASE_URL") {
   "postgres://localhost:5432/shakespeare_app_development"
