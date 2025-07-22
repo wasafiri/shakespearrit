@@ -301,6 +301,49 @@
 
 ---
 
+#### **Task 5.3: Implement Scholarly Text Variations**
+
+*   **Objective:** Enhance the academic value of the platform by incorporating alternative line versions and newly discovered lines from various scholarly sources. This will allow users to explore and interpret the textual diversity of Shakespeare's work.
+*   **Current State:** The data model treats the Shakespearean text as a single, fixed canon. The `SpeechLine` model represents the single source of truth for a line's text.
+*   **Required Actions:**
+    1.  **[ ] Database Schema & Model Changes:**
+        *   [ ] **Create `ScholarSource` Model:**
+            *   [ ] Create a migration for a `scholar_sources` table with `name: String`, `author: String`, `publication_year: Integer`.
+            *   [ ] Create a `ScholarSource` model in `models.rb`.
+        *   [ ] **Create `LineVersion` Model (for variations of existing lines):**
+            *   [ ] Create a migration for a `line_versions` table with `speech_line_id` (FK to `speech_lines`), `scholar_source_id` (FK to `scholar_sources`), `version_text: Text`, and `notes: Text`.
+            *   [ ] Create a `LineVersion` model in `models.rb` with its associations.
+        *   [ ] **Create `AdditionalLine` Model (for completely new lines):**
+            *   [ ] Create a migration for an `additional_lines` table with `scene_id` (FK to `scenes`), `scholar_source_id` (FK to `scholar_sources`), `line_text: Text`, `character_speaking: String`, `position_reference_line_id` (FK to `speech_lines`), `insertion_point: String` ('before' or 'after'), and `notes: Text`.
+            *   [ ] Create an `AdditionalLine` model in `models.rb` with its associations.
+        *   [ ] **Refactor `Interpretation` for Polymorphism:** This is a critical step to allow interpretations of any line type.
+            *   [ ] Create a migration to remove the `speech_line_id` column from the `interpretations` table.
+            *   [ ] Add `interpretable_id: Integer` and `interpretable_type: String` columns to the `interpretations` table. Add an index on these two columns.
+            *   [ ] Write a data migration script to transfer existing data from `speech_line_id` to the new columns (e.g., `interpretable_id = old_speech_line_id`, `interpretable_type = 'SpeechLine'`).
+            *   [ ] Update the `Interpretation` model in `models.rb` to use a polymorphic association. The `sequel-polymorphic` gem or a custom association can be used for this.
+
+    2.  **[ ] Backend API Changes (Roda Routes):**
+        *   [ ] **Update Content API:** Modify the endpoints that serve play content (e.g., `GET /api/v1/speeches/:id` and `GET /api/v1/scenes/:id/speeches`).
+            *   [ ] The logic must now fetch canonical `SpeechLine`s, their associated `LineVersion`s, and any `AdditionalLine`s for the scene.
+            *   [ ] The service layer or route block will be responsible for merging `SpeechLine`s and `AdditionalLine`s into a single, correctly ordered list based on `position_reference_line_id` and `insertion_point`.
+            *   [ ] The JSON response for a canonical line should now include a `versions` array containing its `LineVersion`s.
+        *   [ ] **Update Interpretation API:** Modify `POST /api/v1/interpretations` to accept `interpretable_id` and `interpretable_type` instead of `speech_line_id`.
+
+    3.  **[ ] Frontend UI Changes (SPA):**
+        *   [ ] **Display Variations:** In the content pane, visually distinguish between canonical lines, alternative versions, and newly added lines (e.g., using icons, indentation, or different styling).
+        *   [ ] **Interaction Model:** Design a UI for showing/hiding alternative versions to avoid clutter. For example, a small icon next to a line could expand to show its versions on click.
+        *   [ ] **Enable Interpretation:** Ensure the "Contribute" / "Record my version" button is available for canonical lines, line versions, and additional lines, and that it correctly passes the polymorphic `interpretable_id` and `interpretable_type` to the API.
+
+    4.  **[ ] Admin UI:**
+        *   [ ] Create an admin interface (e.g., under `/admin`) for full CRUD management of `ScholarSource`s.
+        *   [ ] Build an interface for trusted admins or users with a "scholar" role to add, edit, and remove `LineVersion`s and `AdditionalLine`s, linking them to the appropriate sources and positions in the text.
+
+*   **Definition of Done:**
+    *   [ ] The database schema is updated with the new tables and the `Interpretation` model is successfully refactored for polymorphism.
+    *   [ ] The content API correctly assembles and serves scenes with both canonical and scholarly-sourced lines in their proper order, and includes alternative versions.
+    *   [ ] The SPA frontend can render all line types and allows users to view variations.
+    *   [ ] Users can submit an ASL interpretation for any line, regardless of whether it is canonical, a version, or a new addition.
+    *   [ ] Admins have the necessary tools to manage scholarly sources and textual variations.
 
 ---
 
