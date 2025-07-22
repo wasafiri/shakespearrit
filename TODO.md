@@ -306,21 +306,21 @@
 *   **Objective:** Enhance the academic value of the platform by incorporating alternative line versions and newly discovered lines from various scholarly sources. This will allow users to explore and interpret the textual diversity of Shakespeare's work.
 *   **Current State:** The data model treats the Shakespearean text as a single, fixed canon. The `SpeechLine` model represents the single source of truth for a line's text.
 *   **Required Actions:**
-    1.  **[ ] Database Schema & Model Changes:**
-        *   [ ] **Create `ScholarSource` Model:**
-            *   [ ] Create a migration for a `scholar_sources` table with `name: String`, `author: String`, `publication_year: Integer`.
-            *   [ ] Create a `ScholarSource` model in `models.rb`.
-        *   [ ] **Create `LineVersion` Model (for variations of existing lines):**
-            *   [ ] Create a migration for a `line_versions` table with `speech_line_id` (FK to `speech_lines`), `scholar_source_id` (FK to `scholar_sources`), `version_text: Text`, and `notes: Text`.
-            *   [ ] Create a `LineVersion` model in `models.rb` with its associations.
-        *   [ ] **Create `AdditionalLine` Model (for completely new lines):**
-            *   [ ] Create a migration for an `additional_lines` table with `scene_id` (FK to `scenes`), `scholar_source_id` (FK to `scholar_sources`), `line_text: Text`, `character_speaking: String`, `position_reference_line_id` (FK to `speech_lines`), `insertion_point: String` ('before' or 'after'), and `notes: Text`.
-            *   [ ] Create an `AdditionalLine` model in `models.rb` with its associations.
-        *   [ ] **Refactor `Interpretation` for Polymorphism:** This is a critical step to allow interpretations of any line type.
-            *   [ ] Create a migration to remove the `speech_line_id` column from the `interpretations` table.
-            *   [ ] Add `interpretable_id: Integer` and `interpretable_type: String` columns to the `interpretations` table. Add an index on these two columns.
-            *   [ ] Write a data migration script to transfer existing data from `speech_line_id` to the new columns (e.g., `interpretable_id = old_speech_line_id`, `interpretable_type = 'SpeechLine'`).
-            *   [ ] Update the `Interpretation` model in `models.rb` to use a polymorphic association. The `sequel-polymorphic` gem or a custom association can be used for this.
+    1.  **[x] Database Schema & Model Changes:**
+        *   [x] **Create `ScholarSource` Model:**
+            *   [x] Create a migration for a `scholar_sources` table with `name: String`, `author: String`, `publication_year: Integer`.
+            *   [x] Create a `ScholarSource` model in `models.rb`.
+        *   [x] **Create `LineVersion` Model (for variations of existing lines):**
+            *   [x] Create a migration for a `line_versions` table with `speech_line_id` (FK to `speech_lines`), `scholar_source_id` (FK to `scholar_sources`), `version_text: Text`, and `notes: Text`.
+            *   [x] Create a `LineVersion` model in `models.rb` with its associations.
+        *   [x] **Create `AdditionalLine` Model (for completely new lines):**
+            *   [x] Create a migration for an `additional_lines` table with `scene_id` (FK to `scenes`), `scholar_source_id` (FK to `scholar_sources`), `line_text: Text`, `character_speaking: String`, `position_reference_line_id` (FK to `speech_lines`), `insertion_point: String` ('before' or 'after'), and `notes: Text`.
+            *   [x] Create an `AdditionalLine` model in `models.rb` with its associations.
+        *   [x] **Refactor `Interpretation` for Polymorphism:** This is a critical step to allow interpretations of any line type.
+            *   [x] Create a migration to remove the `speech_line_id` column from the `interpretations` table.
+            *   [x] Add `interpretable_id: Integer` and `interpretable_type: String` columns to the `interpretations` table. Add an index on these two columns.
+            *   [x] Write a data migration script to transfer existing data from `speech_line_id` to the new columns (e.g., `interpretable_id = old_speech_line_id`, `interpretable_type = 'SpeechLine'`).
+            *   [x] Update the `Interpretation` model in `models.rb` to use a native Sequel custom association, avoiding external gems.
 
     2.  **[ ] Backend API Changes (Roda Routes):**
         *   [ ] **Update Content API:** Modify the endpoints that serve play content (e.g., `GET /api/v1/speeches/:id` and `GET /api/v1/scenes/:id/speeches`).
@@ -339,7 +339,7 @@
         *   [ ] Build an interface for trusted admins or users with a "scholar" role to add, edit, and remove `LineVersion`s and `AdditionalLine`s, linking them to the appropriate sources and positions in the text.
 
 *   **Definition of Done:**
-    *   [ ] The database schema is updated with the new tables and the `Interpretation` model is successfully refactored for polymorphism.
+    *   [x] The database schema is updated with the new tables and the `Interpretation` model is successfully refactored for polymorphism.
     *   [ ] The content API correctly assembles and serves scenes with both canonical and scholarly-sourced lines in their proper order, and includes alternative versions.
     *   [ ] The SPA frontend can render all line types and allows users to view variations.
     *   [ ] Users can submit an ASL interpretation for any line, regardless of whether it is canonical, a version, or a new addition.
