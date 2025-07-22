@@ -52,14 +52,16 @@ class Minitest::Spec
     SpeechLine.create(speech_id: speech.id, text: "If music be the food of love, play on.")
   end
 
-  def create_interpretation(user, speech_line, params = {})
-    interp = Interpretation.new(
+  def create_interpretation(user, interpretable, params = {})
+    defaults = {
       user_id: user.id,
-      speech_line_id: speech_line.id
-    )
-    interp.set(params)
-    interp.save(validate: false) # Save without validation for test data setup
-    interp
+      interpretable_id: interpretable.id,
+      interpretable_type: interpretable.class.name,
+      youtube_video_id: "test_video_#{rand(10000)}",
+      status: 'approved'
+    }
+    # Save without validation for test data setup
+    Interpretation.new(defaults.merge(params)).save(validate: false)
   end
 
   # Helper for parsing JSON responses

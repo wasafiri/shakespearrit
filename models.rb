@@ -1,6 +1,7 @@
 require_relative "db"
 require "sequel"
 require "bcrypt"
+Sequel.extension :inflector # For .constantize in custom polymorphic associations
 
 # Sequel model classes
 
@@ -77,7 +78,7 @@ class Achievement < Sequel::Model
     end
 
     # Check Shakespeare Scholar
-    unique_plays = user.interpretations.map { |i| i.speech_line.speech.scene.act.play }.uniq
+    unique_plays = user.interpretations.map(&:play).compact.uniq
     if unique_plays.length >= 5
       award_achievement(user, :shakespeare_scholar)
     end
@@ -130,6 +131,7 @@ class Scene < Sequel::Model
   plugin :timestamps, update_on_create: true
   many_to_one :act
   one_to_many :speeches
+  one_to_many :additional_lines
 end
 
 class Speech < Sequel::Model
@@ -142,11 +144,54 @@ class SpeechLine < Sequel::Model
   plugin :timestamps, update_on_create: true
   plugin :validation_helpers
   many_to_one :speech
-  one_to_many :interpretations
+  one_to_many :line_versions
+  one_to_many :interpretations, key: :interpretable_id, reciprocal: :interpretable, conditions: {interpretable_type: 'SpeechLine'},
+    adder: lambda{|interp| interp.update(interpretable_id: pk, interpretable_type: 'SpeechLine')},
+    remover: lambda{|interp| interp.update(interpretable_id: nil, interpretable_type: nil)},
+    clearer: lambda{interpretations_dataset.update(interpretable_id: nil, interpretable_type: nil)}
 
   def validate
     super
     validates_presence [:speech_id, :text]
+  end
+
+  def play
+    speech.scene.act.play
+  end
+end
+
+class ScholarSource < Sequel::Model
+  plugin :timestamps, update_on_create: true
+  one_to_many :line_versions
+  one_to_many :additional_lines
+end
+
+class LineVersion < Sequel::Model
+  plugin :timestamps, update_on_create: true
+  many_to_one :speech_line
+  many_to_one :scholar_source
+  one_to_many :interpretations, key: :interpretable_id, reciprocal: :interpretable, conditions: {interpretable_type: 'LineVersion'},
+    adder: lambda{|interp| interp.update(interpretable_id: pk, interpretable_type: 'LineVersion')},
+    remover: lambda{|interp| interp.update(interpretable_id: nil, interpretable_type: nil)},
+    clearer: lambda{interpretations_dataset.update(interpretable_id: nil, interpretable_type: nil)}
+
+  def play
+    speech_line.play
+  end
+end
+
+class AdditionalLine < Sequel::Model
+  plugin :timestamps, update_on_create: true
+  many_to_one :scene
+  many_to_one :scholar_source
+  many_to_one :position_reference_line, class: :SpeechLine, key: :position_reference_line_id
+  one_to_many :interpretations, key: :interpretable_id, reciprocal: :interpretable, conditions: {interpretable_type: 'AdditionalLine'},
+    adder: lambda{|interp| interp.update(interpretable_id: pk, interpretable_type: 'AdditionalLine')},
+    remover: lambda{|interp| interp.update(interpretable_id: nil, interpretable_type: nil)},
+    clearer: lambda{interpretations_dataset.update(interpretable_id: nil, interpretable_type: nil)}
+
+  def play
+    scene.act.play
   end
 end
 
@@ -155,11 +200,42 @@ class Interpretation < Sequel::Model
   plugin :validation_helpers
   plugin :json_serializer, naked: true # Allow mass assignment for all columns in tests
   many_to_one :user
-  many_to_one :speech_line
+  many_to_one :interpretable, reciprocal: :interpretations, reciprocal_type: :one_to_many,
+    setter: (lambda do |interpretable_obj|
+      self[:interpretable_id] = (interpretable_obj.pk if interpretable_obj)
+      self[:interpretable_type] = (interpretable_obj.class.name if interpretable_obj)
+    end),
+    dataset: (proc do
+      return unless interpretable_type && interpretable_id
+      klass = interpretable_type.constantize
+      klass.where(klass.primary_key => interpretable_id)
+    end),
+    eager_loader: (lambda do |eo|
+      id_map = {}
+      eo[:rows].each do |interp|
+        interp.associations[:interpretable] = nil
+        if interp.interpretable_type && interp.interpretable_id
+          ((id_map[interp.interpretable_type] ||= {})[interp.interpretable_id] ||= []) << interp
+        end
+      end
+      id_map.each do |klass_name, id_map_for_class|
+        klass = klass_name.constantize
+        klass.where(klass.primary_key => id_map_for_class.keys).all do |interpretable_obj|
+          id_map_for_class[interpretable_obj.pk].each do |interp|
+            interp.associations[:interpretable] = interpretable_obj
+          end
+        end
+      end
+    end)
+
   one_to_many :ratings
   one_to_many :comments
   many_to_one :source_interpretation, class: self, key: :source_interpretation_id
   one_to_many :forks, key: :source_interpretation_id, class: self
+
+  def play
+    interpretable.play if interpretable.respond_to?(:play)
+  end
 
   def average_rating
     return 0 if ratings.empty?
@@ -168,7 +244,7 @@ class Interpretation < Sequel::Model
 
   def validate
     super
-    validates_presence [:youtube_video_id, :status]
+    validates_presence [:youtube_video_id, :status, :interpretable_id, :interpretable_type]
     validates_includes ['pending', 'approved', 'rejected'], :status
   end
 end
@@ -200,4 +276,3 @@ class Comment < Sequel::Model
     validates_presence [:user_id, :interpretation_id, :body]
   end
 end
-
